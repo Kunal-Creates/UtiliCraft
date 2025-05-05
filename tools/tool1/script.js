@@ -77,8 +77,10 @@ async function main() {
       const html = wasmModule.parse_markdown(raw);
       preview.innerHTML = html;
     } else {
-      // Simple fallback that just displays the raw markdown
-      preview.innerHTML = `${escapeHtml(raw)}`;
+      // Fallback rendering if WebAssembly failed to load
+      preview.innerHTML = `<div>
+        <pre>${escapeHtml(raw)}</pre>
+      </div>`;
     }
   }
   
