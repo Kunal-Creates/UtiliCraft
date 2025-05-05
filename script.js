@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Update meta theme color for browsers
             document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f8f9fc');
+            
+            // Notify iframes about theme change
+            notifyIframesThemeChange(false);
         } else {
             document.body.classList.remove('light-theme');
             document.body.classList.add('dark-theme');
@@ -41,6 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Update meta theme color for browsers
             document.querySelector('meta[name="theme-color"]').setAttribute('content', '#131620');
+            
+            // Notify iframes about theme change
+            notifyIframesThemeChange(true);
         }
     });
     
@@ -52,6 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
             themeIcon.classList.remove('fa-moon');
             themeIcon.classList.add('fa-sun');
         }
+    }
+    
+    // Function to notify iframes about theme changes
+    function notifyIframesThemeChange(isDarkTheme) {
+        // Find all iframes in the document
+        const iframes = document.querySelectorAll('iframe');
+        
+        // Send message to each iframe
+        iframes.forEach(iframe => {
+            try {
+                iframe.contentWindow.postMessage({
+                    type: 'theme-change',
+                    isDarkTheme: isDarkTheme
+                }, '*');
+            } catch(e) {
+                console.error("Could not send theme to iframe:", e);
+            }
+        });
     }
     
     // View Toggle Functionality
@@ -250,6 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mousedown', () => {
         document.body.classList.remove('keyboard-navigation');
     });
+    
+    // Notify iframes of the current theme on page load
+    const isDarkTheme = document.body.classList.contains('dark-theme');
+    notifyIframesThemeChange(isDarkTheme);
     
     // Add initialization complete indicator
     console.log('UtiliCraft UI initialized successfully');
