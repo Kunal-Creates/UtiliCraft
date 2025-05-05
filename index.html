@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UtiliCraft - Modern Utility Tools</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="description" content="UtiliCraft - A collection of free utility tools for developers and creators">
+    <meta name="theme-color" content="#131620">
+</head>
+<body class="dark-theme">
+    <header>
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fa-solid fa-gear"></i>
+            </div>
+            <h1>UtiliCraft</h1>
+        </div>
+        
+        <div class="header-actions">
+            <div class="search-container">
+                <span class="search-icon">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" placeholder="Search tools..." aria-label="Search tools">
+            </div>
+            <button id="theme-toggle" aria-label="Toggle dark/light theme">
+                <i class="fa-solid fa-sun"></i>
+            </button>
+            <button class="donate-btn">
+                <i class="fa-solid fa-heart"></i>
+                <span>Support Us</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="tools-header">
+            <h2>Utility Tools <i class="fa-solid fa-gear"></i><i class="fa-solid fa-wrench"></i></h2>
+            <div class="view-toggle">
+                <button id="grid-view" class="active" aria-label="Grid view"><i class="fa-solid fa-table-cells-large"></i></button>
+                <button id="list-view" aria-label="List view"><i class="fa-solid fa-list"></i></button>
+            </div>
+        </div>
+
+        <div class="tools-container grid-view">
+            <!-- Markdown Editor -->
+            <div class="tool-card">
+                <div class="tool-icon">
+                    <i class="fa-solid fa-file-lines"></i>
+                </div>
+                <div class="tool-info">
+                    <h3>Markdown Editor</h3>
+                    <p>Create and preview Markdown documents with real-time rendering and syntax highlighting.</p>
+                </div>
+                <div class="tool-arrow">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+                <span class="badge badge-popular">Popular</span>
+            </div>
+
+            <!-- JSON Formatter -->
+            <div class="tool-card">
+                <div class="tool-icon">
+                    <i class="fa-solid fa-code"></i>
+                </div>
+                <div class="tool-info">
+                    <h3>JSON Formatter & Validator</h3>
+                    <p>Format, validate and beautify your JSON data with our powerful formatter tool.</p>
+                </div>
+                <div class="tool-arrow">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+
+            <!-- Text Encryption -->
+            <div class="tool-card">
+                <div class="tool-icon">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <div class="tool-info">
+                    <h3>Text Encryptor/Decryptor</h3>
+                    <p>Encrypt and decrypt text using various secure algorithms to protect sensitive information.</p>
+                </div>
+                <div class="tool-arrow">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+
+            <!-- Image Compressor -->
+            <div class="tool-card">
+                <div class="tool-icon">
+                    <i class="fa-solid fa-image"></i>
+                </div>
+                <div class="tool-info">
+                    <h3>Image Compressor</h3>
+                    <p>Reduce image file sizes without compromising quality for faster websites and apps.</p>
+                </div>
+                <div class="tool-arrow">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+                <span class="badge badge-new">New</span>
+            </div>
+            
+            <!-- Color Converter -->
+            <div class="tool-card">
+                <div class="tool-icon">
+                    <i class="fa-solid fa-palette"></i>
+                </div>
+                <div class="tool-info">
+                    <h3>Color Converter</h3>
+                    <p>Convert colors between HEX, RGB, HSL and more with live preview and shade generator.</p>
+                </div>
+                <div class="tool-arrow">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+            
+            <!-- Password Generator -->
+            <div class="tool-card">
+                <div class="tool-icon">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div class="tool-info">
+                    <h3>Password Generator</h3>
+                    <p>Create strong, secure passwords with custom settings for length and character types.</p>
+                </div>
+                <div class="tool-arrow">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>© 2025 UtiliCraft - All tools are free to use</p>
+        <div class="footer-links">
+            <a href="#">About</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+            <a href="#">Contact</a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
