@@ -90,9 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateViewButtons(savedView);
     }
     
-    gridViewBtn.addEventListener('click', () => {
+    gridViewBtn.addEventListener('click', (event) => {
         // Add ripple effect
-        addRippleEffect(gridViewBtn);
+        addRippleEffect(gridViewBtn, event);
         
         toolsContainer.classList.remove('list-view');
         toolsContainer.classList.add('grid-view');
@@ -103,9 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
         animateCards();
     });
     
-    listViewBtn.addEventListener('click', () => {
+    listViewBtn.addEventListener('click', (event) => {
         // Add ripple effect
-        addRippleEffect(listViewBtn);
+        addRippleEffect(listViewBtn, event);
         
         toolsContainer.classList.remove('grid-view');
         toolsContainer.classList.add('list-view');
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Add ripple effect for buttons
-    function addRippleEffect(button) {
+    function addRippleEffect(button, event) {
         const ripple = document.createElement('span');
         ripple.classList.add('ripple');
         button.appendChild(ripple);

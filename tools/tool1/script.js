@@ -1,32 +1,52 @@
-import init, { parse_markdown } from "./pkg/rust_src.js";
+// Check if the WebAssembly module exists and handle errors gracefully
+let wasmModule;
+
+async function loadWasmModule() {
+  try {
+    // Dynamic import with error handling
+    const module = await import("./pkg/rust_src.js");
+    await module.default();
+    return module;
+  } catch (error) {
+    console.error("Failed to load WebAssembly module:", error);
+    return null;
+  }
+}
 
 async function main() {
-  await init();
-
+  // Try to load the WebAssembly module
+  wasmModule = await loadWasmModule();
+  
   const input = document.getElementById("markdown-input");
   const preview = document.getElementById("preview");
 
   // Add theme sync functionality
   function syncTheme() {
     try {
-      // Check if we're in an iframe
+      // Check if we're in an iframe with same-origin access
       const isInIframe = window !== window.parent;
       
       if (isInIframe) {
-        // We're in an iframe, get theme from parent
-        const parentBody = window.parent.document.body;
-        const isDarkTheme = parentBody.classList.contains('dark-theme');
-        document.body.classList.toggle('dark-theme', isDarkTheme);
+        try {
+          // Try to access parent window (will throw if cross-origin)
+          const parentBody = window.parent.document.body;
+          const isDarkTheme = parentBody.classList.contains('dark-theme');
+          document.body.classList.toggle('dark-theme', isDarkTheme);
+        } catch (corsError) {
+          // Fall back to localStorage or default if cross-origin error
+          const savedTheme = localStorage.getItem('utilicraft-theme');
+          if (savedTheme) {
+            document.body.classList.toggle('dark-theme', savedTheme === 'dark-theme');
+          }
+        }
       } else {
-        // We're not in an iframe, maybe direct access to the tool
-        // Check local storage for theme preference
+        // We're not in an iframe, check local storage for theme preference
         const savedTheme = localStorage.getItem('utilicraft-theme');
         if (savedTheme) {
           document.body.classList.toggle('dark-theme', savedTheme === 'dark-theme');
         }
       }
     } catch (e) {
-      // Handle cross-origin issues
       console.error("Theme sync error:", e);
     }
   }
@@ -36,25 +56,42 @@ async function main() {
 
   // Listen for theme changes in the parent document if in iframe
   try {
-    if (window !== window.parent) {
-      // Create a polling mechanism since MutationObserver might not work across frames
-      setInterval(syncTheme, 500);
+    // Set up message listening for theme changes
+    window.addEventListener('message', (event) => {
+      // Add origin checking for production
+      // if (event.origin !== "https://your-production-domain.com") return;
       
-      // Also try to set up message listening for theme changes
-      window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'theme-change') {
-          document.body.classList.toggle('dark-theme', event.data.isDarkTheme);
-        }
-      });
-    }
+      if (event.data && event.data.type === 'theme-change') {
+        document.body.classList.toggle('dark-theme', event.data.isDarkTheme);
+      }
+    });
   } catch (e) {
     console.error("Theme observer setup error:", e);
   }
 
   function renderPreview() {
     const raw = input.value;
-    const html = parse_markdown(raw);
-    preview.innerHTML = html;
+    
+    // Check if WebAssembly module loaded successfully
+    if (wasmModule && wasmModule.parse_markdown) {
+      const html = wasmModule.parse_markdown(raw);
+      preview.innerHTML = html;
+    } else {
+      // Fallback rendering if WebAssembly failed to load
+      preview.innerHTML = `<div style="color:red;">
+        <p><strong>WebAssembly module failed to load</strong></p>
+        <p>Please ensure the Rust WebAssembly module is properly compiled and deployed.</p>
+        <p>Raw markdown:</p>
+        <pre>${escapeHtml(raw)}</pre>
+      </div>`;
+    }
+  }
+  
+  // Simple HTML escape function for the fallback renderer
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   input.addEventListener("input", renderPreview);
@@ -66,4 +103,5 @@ async function main() {
   renderPreview();
 }
 
+// Start the application
 main();
