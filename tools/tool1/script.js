@@ -77,13 +77,8 @@ async function main() {
       const html = wasmModule.parse_markdown(raw);
       preview.innerHTML = html;
     } else {
-      // Fallback rendering if WebAssembly failed to load
-      preview.innerHTML = `<div style="color:red;">
-        <p><strong>WebAssembly module failed to load</strong></p>
-        <p>Please ensure the Rust WebAssembly module is properly compiled and deployed.</p>
-        <p>Raw markdown:</p>
-        <pre>${escapeHtml(raw)}</pre>
-      </div>`;
+      // Simple fallback that just displays the raw markdown
+      preview.innerHTML = `${escapeHtml(raw)}`;
     }
   }
   
