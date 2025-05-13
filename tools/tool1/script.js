@@ -3,12 +3,71 @@ let wasmModule;
 
 async function loadWasmModule() {
   try {
-    // Dynamic import with error handling
-    const module = await import("./pkg/rust_src.js");
-    await module.default();
-    return module;
+    // Get the base URL for the current deployment
+    const baseUrl = new URL('.', window.location.href).pathname;
+    
+    // Use dynamic import with properly resolved path
+    // First try relative path (for local development)
+    try {
+      const module = await import("./pkg/rust_src.js");
+      await module.default();
+      console.log("Successfully loaded WebAssembly module from relative path");
+      return module;
+    } catch (relativeError) {
+      console.warn("Failed to load from relative path, trying with base URL:", baseUrl);
+      
+      // If relative path fails, try with base URL path (for GitHub Pages)
+      try {
+        const module = await import(`${baseUrl}pkg/rust_src.js`);
+        await module.default();
+        console.log("Successfully loaded WebAssembly module with base URL path");
+        return module;
+      } catch (baseUrlError) {
+        // If that fails too, try with absolute path from repo root
+        console.warn("Failed with base URL path, trying absolute path from repo root");
+        const repoName = window.location.pathname.split('/')[1]; // Extract repo name from URL
+        const absolutePath = repoName ? `/${repoName}/pkg/rust_src.js` : '/pkg/rust_src.js';
+        
+        try {
+          const module = await import(absolutePath);
+          await module.default();
+          console.log("Successfully loaded WebAssembly module with absolute path");
+          return module;
+        } catch (absoluteError) {
+          console.error("All loading attempts failed. Details:", { 
+            relativeError, 
+            baseUrlError, 
+            absoluteError,
+            paths: {
+              relative: "./pkg/rust_src.js",
+              baseUrl: `${baseUrl}pkg/rust_src.js`,
+              absolute: absolutePath
+            }
+          });
+          throw new Error("Failed to load WebAssembly module after multiple attempts");
+        }
+      }
+    }
   } catch (error) {
     console.error("Failed to load WebAssembly module:", error);
+    
+    // Display error message in the preview area for better debugging
+    const preview = document.getElementById("preview");
+    if (preview) {
+      preview.innerHTML = `
+        <div class="wasm-error">
+          <h3>⚠️ WebAssembly module failed to load</h3>
+          <p>This could be due to CORS issues or path resolution problems when deployed on GitHub Pages.</p>
+          <p>Error details: ${error.message}</p>
+          <h4>Troubleshooting:</h4>
+          <ul>
+            <li>Check browser console for detailed error messages</li>
+            <li>Ensure all WASM files are properly built and deployed</li>
+            <li>Try adding a .nojekyll file to your GitHub repo to prevent Jekyll processing</li>
+          </ul>
+        </div>
+      `;
+    }
     return null;
   }
 }
@@ -76,26 +135,39 @@ async function main() {
     
     // Check if WebAssembly module loaded successfully
     if (wasmModule && wasmModule.parse_markdown) {
-      const html = wasmModule.parse_markdown(raw);
-      preview.innerHTML = html;
-      
-      // Apply additional styling to tables for better rendering
-      const tables = preview.querySelectorAll('table');
-      tables.forEach(table => {
-        if (!table.classList.contains('styled-table')) {
-          table.classList.add('styled-table');
+      try {
+        const html = wasmModule.parse_markdown(raw);
+        preview.innerHTML = html;
+        
+        // Apply additional styling to tables for better rendering
+        const tables = preview.querySelectorAll('table');
+        tables.forEach(table => {
+          if (!table.classList.contains('styled-table')) {
+            table.classList.add('styled-table');
+          }
+        });
+        
+        // Ensure scrolling is reset to top when content changes significantly
+        if (preview.scrollHeight > preview.clientHeight) {
+          preview.scrollTop = 0;
         }
-      });
-      
-      // Ensure scrolling is reset to top when content changes significantly
-      if (preview.scrollHeight > preview.clientHeight) {
-        preview.scrollTop = 0;
+      } catch (renderError) {
+        console.error("Error rendering markdown:", renderError);
+        preview.innerHTML = `
+          <div class="error-message">
+            <p>Error rendering markdown: ${renderError.message}</p>
+            <pre>${escapeHtml(raw)}</pre>
+          </div>
+        `;
       }
     } else {
       // Fallback rendering if WebAssembly failed to load
-      preview.innerHTML = `<div>
-        <pre>${escapeHtml(raw)}</pre>
-      </div>`;
+      preview.innerHTML = `
+        <div class="fallback-preview">
+          <p><strong>WebAssembly module not loaded.</strong> Using fallback preview:</p>
+          <pre>${escapeHtml(raw)}</pre>
+        </div>
+      `;
     }
   }
   
