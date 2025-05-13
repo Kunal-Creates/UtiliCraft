@@ -7,5 +7,15 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = "0.2"
-pulldown-cmark = "0.13.0"
+wasm-bindgen = "0.2.84"
+pulldown-cmark = { version = "0.9.3", default-features = false, features = ["simd"] }
+js-sys = "0.3.64"
+console_error_panic_hook = "0.1.7"
+wee_alloc = "0.4.5"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.37"
+
+[profile.release]
+opt-level = 3
+lto = true

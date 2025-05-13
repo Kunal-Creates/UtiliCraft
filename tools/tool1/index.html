@@ -14,13 +14,20 @@
 
   <main class="editor-container">
     <textarea id="markdown-input" placeholder="Write your Markdown here..."></textarea>
-    <div id="preview" class="preview-area"></div>
+    <div class="preview-container">
+      <div id="preview" class="preview-area"></div>
+      <div class="preview-header">
+        <button id="download-pdf" class="export-button">Download as PDF</button>
+        <button id="download-html" class="export-button">Download as HTML</button>
+      </div>
+    </div>
   </main>
 
   <footer>
     <p>Built with 🦀 Rust + WebAssembly</p>
   </footer>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>
 </html>

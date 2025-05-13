@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.add('light-theme');
             localStorage.setItem('utilicraft-theme', 'light-theme');
             updateThemeIcon('light-theme');
+        } else {
+            // Default to dark theme if no preference
+            document.body.classList.remove('light-theme');
+            document.body.classList.add('dark-theme');
+            localStorage.setItem('utilicraft-theme', 'dark-theme');
+            updateThemeIcon('dark-theme');
         }
     }
     
@@ -32,7 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updateThemeIcon('light-theme');
             
             // Update meta theme color for browsers
-            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f8f9fc');
+            const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+            if (metaThemeColor) {
+                metaThemeColor.setAttribute('content', '#f8f9fc');
+            }
             
             // Notify iframes about theme change
             notifyIframesThemeChange(false);
@@ -43,7 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updateThemeIcon('dark-theme');
             
             // Update meta theme color for browsers
-            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#131620');
+            const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+            if (metaThemeColor) {
+                metaThemeColor.setAttribute('content', '#131620');
+            }
             
             // Notify iframes about theme change
             notifyIframesThemeChange(true);
@@ -60,18 +72,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Function to notify iframes about theme changes
+    // Function to notify iframes about theme changes - using postMessage with proper origin checking
     function notifyIframesThemeChange(isDarkTheme) {
         // Find all iframes in the document
         const iframes = document.querySelectorAll('iframe');
+        const currentOrigin = window.location.origin;
         
         // Send message to each iframe
         iframes.forEach(iframe => {
             try {
-                iframe.contentWindow.postMessage({
-                    type: 'theme-change',
-                    isDarkTheme: isDarkTheme
-                }, '*');
+                // Only send messages to same-origin iframes or specific trusted origins
+                const iframeOrigin = new URL(iframe.src, currentOrigin).origin;
+                if (iframeOrigin === currentOrigin) {
+                    iframe.contentWindow.postMessage({
+                        type: 'theme-change',
+                        isDarkTheme: isDarkTheme
+                    }, iframeOrigin);
+                }
             } catch(e) {
                 console.error("Could not send theme to iframe:", e);
             }
@@ -88,6 +105,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedView) {
         toolsContainer.className = `tools-container ${savedView}`;
         updateViewButtons(savedView);
+    } else {
+        // Set default view if none saved
+        toolsContainer.className = 'tools-container grid-view';
+        updateViewButtons('grid-view');
+        localStorage.setItem('utilicraft-view', 'grid-view');
     }
     
     gridViewBtn.addEventListener('click', (event) => {
@@ -140,21 +162,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Run initial animation on page load
+    // Run initial animation on page load with a small delay to ensure DOM is ready
     setTimeout(() => {
-        animateCards();
+        if (document.querySelectorAll('.tool-card').length > 0) {
+            animateCards();
+        }
     }, 100);
     
     // Tool Card Click Animation
     const toolCards = document.querySelectorAll('.tool-card');
     toolCards.forEach(card => {
-        card.addEventListener('click', () => {
-            card.style.transform = 'scale(0.97)';
-            setTimeout(() => {
-                card.style.transform = '';
-                // Here you would normally add navigation to the tool page
-                // window.location.href = '/tool/tool-id';
-            }, 150);
+        card.addEventListener('click', (event) => {
+            // Prevent default only if it's a link and we want to add animation first
+            if (card.tagName === 'A' || card.querySelector('a')) {
+                event.preventDefault();
+                
+                card.style.transform = 'scale(0.97)';
+                
+                // Get the href if it exists
+                let href;
+                if (card.tagName === 'A') {
+                    href = card.getAttribute('href');
+                } else {
+                    const link = card.querySelector('a');
+                    if (link) {
+                        href = link.getAttribute('href');
+                    }
+                }
+                
+                setTimeout(() => {
+                    card.style.transform = '';
+                    // Navigate after animation completes
+                    if (href) {
+                        window.location.href = href;
+                    }
+                }, 150);
+            } else {
+                card.style.transform = 'scale(0.97)';
+                setTimeout(() => {
+                    card.style.transform = '';
+                }, 150);
+            }
         });
     });
     
@@ -181,38 +229,52 @@ document.addEventListener('DOMContentLoaded', () => {
     // Search functionality
     const searchInput = document.querySelector('.search-container input');
     
-    searchInput.addEventListener('input', () => {
-        const searchTerm = searchInput.value.toLowerCase();
-        const toolCards = document.querySelectorAll('.tool-card');
-        
-        toolCards.forEach(card => {
-            const toolName = card.querySelector('h3').textContent.toLowerCase();
-            const toolDescription = card.querySelector('p').textContent.toLowerCase();
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const toolCards = document.querySelectorAll('.tool-card');
+            let hasResults = false;
             
-            if (toolName.includes(searchTerm) || toolDescription.includes(searchTerm)) {
-                card.style.display = '';
-            } else {
-                card.style.display = 'none';
+            toolCards.forEach(card => {
+                const toolName = card.querySelector('h3')?.textContent.toLowerCase() || '';
+                const toolDescription = card.querySelector('p')?.textContent.toLowerCase() || '';
+                
+                if (toolName.includes(searchTerm) || toolDescription.includes(searchTerm)) {
+                    card.style.display = '';
+                    hasResults = true;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Show/hide no results message
+            const noResultsMsg = document.querySelector('.no-search-results');
+            if (noResultsMsg) {
+                noResultsMsg.style.display = hasResults ? 'none' : 'block';
             }
         });
-    });
+    }
     
     // Donate button animation
     const donateBtn = document.querySelector('.donate-btn');
     
-    donateBtn.addEventListener('mouseenter', () => {
-        if (!donateBtn.classList.contains('animated')) {
-            donateBtn.classList.add('animated');
-            const heartIcon = donateBtn.querySelector('i');
-            
-            heartIcon.classList.add('fa-beat');
-            
-            setTimeout(() => {
-                heartIcon.classList.remove('fa-beat');
-                donateBtn.classList.remove('animated');
-            }, 1000);
-        }
-    });
+    if (donateBtn) {
+        donateBtn.addEventListener('mouseenter', () => {
+            if (!donateBtn.classList.contains('animated')) {
+                donateBtn.classList.add('animated');
+                const heartIcon = donateBtn.querySelector('i');
+                
+                if (heartIcon) {
+                    heartIcon.classList.add('fa-beat');
+                    
+                    setTimeout(() => {
+                        heartIcon.classList.remove('fa-beat');
+                        donateBtn.classList.remove('animated');
+                    }, 1000);
+                }
+            }
+        });
+    }
     
     // Add tooltip functionality for new and popular badges
     const toolCardsWithBadges = document.querySelectorAll('.tool-card .badge');
@@ -235,14 +297,27 @@ document.addEventListener('DOMContentLoaded', () => {
     
     footerLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            // This would normally navigate to the appropriate page
-            // For now, let's just add a visual effect
-            e.preventDefault();
+            const href = link.getAttribute('href');
             
-            link.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                link.style.transform = '';
-            }, 300);
+            // Only override behavior for same-page anchors
+            if (href && href.startsWith('#')) {
+                e.preventDefault();
+                
+                // Visual effect
+                link.style.transform = 'scale(1.1)';
+                
+                // Smooth scroll to the element
+                const targetElement = document.querySelector(href);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+                
+                setTimeout(() => {
+                    link.style.transform = '';
+                }, 300);
+            }
         });
     });
     
@@ -250,13 +325,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleResponsiveLayout() {
         const isMobile = window.innerWidth <= 768;
         const donateBtn = document.querySelector('.donate-btn');
-        const donateText = donateBtn.querySelector('span');
         
-        if (isMobile) {
-            donateText.style.display = 'none';
-        } else {
-            donateText.style.display = '';
+        if (donateBtn) {
+            const donateText = donateBtn.querySelector('span');
+            if (donateText) {
+                donateText.style.display = isMobile ? 'none' : '';
+            }
         }
+        
+        // Additional responsive adjustments can be added here
     }
     
     // Run on load and window resize
