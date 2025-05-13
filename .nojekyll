@@ -1,3 +1,0 @@
-# This file tells GitHub Pages not to process this project with Jekyll
-# This is important because Jekyll processing can interfere with underscore files
-# and other files that are important for WebAssembly to work correctly
