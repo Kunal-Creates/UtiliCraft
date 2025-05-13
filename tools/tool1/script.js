@@ -10,7 +10,7 @@ async function loadWasmModule() {
     // First try relative path (for local development)
     try {
       const module = await import("./pkg/rust_src.js");
-      await module.default();
+      await module.default(); // Initialize the module
       console.log("Successfully loaded WebAssembly module from relative path");
       return module;
     } catch (relativeError) {
@@ -19,7 +19,7 @@ async function loadWasmModule() {
       // If relative path fails, try with base URL path (for GitHub Pages)
       try {
         const module = await import(`${baseUrl}pkg/rust_src.js`);
-        await module.default();
+        await module.default(); // Initialize the module
         console.log("Successfully loaded WebAssembly module with base URL path");
         return module;
       } catch (baseUrlError) {
@@ -30,21 +30,31 @@ async function loadWasmModule() {
         
         try {
           const module = await import(absolutePath);
-          await module.default();
+          await module.default(); // Initialize the module
           console.log("Successfully loaded WebAssembly module with absolute path");
           return module;
         } catch (absoluteError) {
-          console.error("All loading attempts failed. Details:", { 
-            relativeError, 
-            baseUrlError, 
-            absoluteError,
-            paths: {
-              relative: "./pkg/rust_src.js",
-              baseUrl: `${baseUrl}pkg/rust_src.js`,
-              absolute: absolutePath
-            }
-          });
-          throw new Error("Failed to load WebAssembly module after multiple attempts");
+          // One more attempt - trying subdirectory structure often found on GitHub Pages
+          try {
+            const module = await import('/pkg/rust_src.js');
+            await module.default();
+            console.log("Successfully loaded WebAssembly module from root /pkg path");
+            return module;
+          } catch (rootError) {
+            console.error("All loading attempts failed. Details:", { 
+              relativeError, 
+              baseUrlError, 
+              absoluteError,
+              rootError,
+              paths: {
+                relative: "./pkg/rust_src.js",
+                baseUrl: `${baseUrl}pkg/rust_src.js`,
+                absolute: absolutePath,
+                root: "/pkg/rust_src.js"
+              }
+            });
+            throw new Error("Failed to load WebAssembly module after multiple attempts");
+          }
         }
       }
     }
@@ -64,6 +74,7 @@ async function loadWasmModule() {
             <li>Check browser console for detailed error messages</li>
             <li>Ensure all WASM files are properly built and deployed</li>
             <li>Try adding a .nojekyll file to your GitHub repo to prevent Jekyll processing</li>
+            <li>Verify that the pkg/ directory is accessible at the deployed URL</li>
           </ul>
         </div>
       `;
@@ -130,21 +141,63 @@ async function main() {
     console.error("Theme observer setup error:", e);
   }
 
+  // Add a security filter to detect and mask API tokens and sensitive information
+  function secureSanitize(text) {
+    // Check for potential API tokens (alphanumeric strings of appropriate length)
+    // Atlassian API tokens are typically 24+ characters
+    const apiTokenPattern = /([a-zA-Z0-9]{24,})/g;
+    const sanitizedText = text.replace(apiTokenPattern, match => {
+      // Only replace if it looks like an API token (not just any long string)
+      if (/[a-zA-Z]/.test(match) && /[0-9]/.test(match)) {
+        return "[REDACTED API TOKEN]";
+      }
+      return match;
+    });
+    
+    return sanitizedText;
+  }
+
   function renderPreview() {
     const raw = input.value;
+    const secureContent = secureSanitize(raw);
     
     // Check if WebAssembly module loaded successfully
     if (wasmModule && wasmModule.parse_markdown) {
       try {
-        const html = wasmModule.parse_markdown(raw);
+        const html = wasmModule.parse_markdown(secureContent);
         preview.innerHTML = html;
         
-        // Apply additional styling to tables for better rendering
+        // Fix for table styling - ensure tables have proper CSS
         const tables = preview.querySelectorAll('table');
         tables.forEach(table => {
+          // Make sure each table has the styled-table class
           if (!table.classList.contains('styled-table')) {
             table.classList.add('styled-table');
           }
+          
+          // Ensure each table has proper structure (thead and tbody)
+          if (!table.querySelector('thead')) {
+            const firstRow = table.querySelector('tr');
+            if (firstRow) {
+              const thead = document.createElement('thead');
+              thead.appendChild(firstRow.cloneNode(true));
+              table.insertBefore(thead, firstRow);
+              firstRow.parentNode.removeChild(firstRow);
+            }
+          }
+          
+          // Force table to full width
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.style.marginBottom = '1em';
+          
+          // Style all cells for consistency
+          const cells = table.querySelectorAll('th, td');
+          cells.forEach(cell => {
+            cell.style.border = '1px solid #ddd';
+            cell.style.padding = '8px';
+            cell.style.textAlign = 'left';
+          });
         });
         
         // Ensure scrolling is reset to top when content changes significantly
@@ -156,16 +209,18 @@ async function main() {
         preview.innerHTML = `
           <div class="error-message">
             <p>Error rendering markdown: ${renderError.message}</p>
-            <pre>${escapeHtml(raw)}</pre>
+            <pre>${escapeHtml(secureContent)}</pre>
           </div>
         `;
       }
     } else {
       // Fallback rendering if WebAssembly failed to load
+      // Create a basic table renderer for the fallback mode
+      const processedContent = processFallbackMarkdown(secureContent);
       preview.innerHTML = `
         <div class="fallback-preview">
           <p><strong>WebAssembly module not loaded.</strong> Using fallback preview:</p>
-          <pre>${escapeHtml(raw)}</pre>
+          ${processedContent}
         </div>
       `;
     }
@@ -177,6 +232,62 @@ async function main() {
     div.textContent = text;
     return div.innerHTML;
   }
+  
+  // Basic markdown processor for fallback mode
+  function processFallbackMarkdown(text) {
+    // Process headers
+    let processed = text.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, content) => {
+      const level = hashes.length;
+      return `<h${level}>${escapeHtml(content)}</h${level}>`;
+    });
+    
+    // Process tables (basic support)
+    processed = processed.replace(/^\|(.+)\|$/gm, (match, content) => {
+      // Check if this is a header separator row
+      if (/^[\s-:|]+$/.test(content)) {
+        return ''; // Skip separator rows
+      }
+      
+      const cells = content.split('|').map(cell => cell.trim());
+      
+      // Determine if this is a header row (first row that's not a separator)
+      const isHeader = /^\|(.+)\|[\r\n]+\|([\s-:|]+)\|/.test(match + '\n');
+      
+      let row = '<tr>';
+      cells.forEach(cell => {
+        if (isHeader) {
+          row += `<th style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(cell)}</th>`;
+        } else {
+          row += `<td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(cell)}</td>`;
+        }
+      });
+      row += '</tr>';
+      
+      // If this is the first row, add table opening tag
+      if (isHeader) {
+        return `<table style="width:100%; border-collapse: collapse; margin-bottom: 1em;"><thead>${row}</thead><tbody>`;
+      }
+      
+      // Check if the next line is also a table row
+      const nextLineIsTable = /^\|(.+)\|$/m.test(text.split(match)[1]);
+      
+      // If next line is not a table, close the table
+      if (!nextLineIsTable) {
+        return `${row}</tbody></table>`;
+      }
+      
+      return row;
+    });
+    
+    // Handle code blocks
+    processed = processed.replace(/```(\w*)\n([\s\S]*?)```/g, 
+      (match, language, code) => `<pre><code class="language-${language}">${escapeHtml(code)}</code></pre>`);
+    
+    // Convert line breaks
+    processed = processed.replace(/\n\n/g, '<br><br>');
+    
+    return processed;
+  }
 
   // Function to download content as HTML
   function downloadAsHtml() {
@@ -185,8 +296,16 @@ async function main() {
       return;
     }
     
-    // Get the HTML content from the preview div
-    const htmlContent = preview.innerHTML;
+    // Apply security filter to potentially sensitive content
+    const secureContent = secureSanitize(input.value);
+    
+    // Get the HTML content, either from WebAssembly or fallback
+    let htmlContent;
+    if (wasmModule && wasmModule.parse_markdown) {
+      htmlContent = wasmModule.parse_markdown(secureContent);
+    } else {
+      htmlContent = processFallbackMarkdown(secureContent);
+    }
     
     // Create a complete HTML document
     const fullHtml = `
@@ -266,9 +385,19 @@ async function main() {
       return;
     }
     
+    // Apply security filter to potentially sensitive content
+    const secureContent = secureSanitize(input.value);
+    
     // Create a temporary container for PDF rendering
     const tempContainer = document.createElement('div');
-    tempContainer.innerHTML = preview.innerHTML;
+    
+    // Get the HTML content, either from WebAssembly or fallback
+    if (wasmModule && wasmModule.parse_markdown) {
+      tempContainer.innerHTML = wasmModule.parse_markdown(secureContent);
+    } else {
+      tempContainer.innerHTML = processFallbackMarkdown(secureContent);
+    }
+    
     tempContainer.style.padding = '20px';
     tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif';
     tempContainer.style.lineHeight = '1.6';
